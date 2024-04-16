@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
     }
 //testowanie123123123
+    //podkomentarz
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
     }
