@@ -1,6 +1,0 @@
-com.example.garden_map.test.app-annotation-experimental-1.3.0-0 C:\Users\Dominik\.gradle\caches\transforms-3\9a646c031d1cae3b31a4419d79539a0c\transformed\annotation-experimental-1.3.0\res
-com.example.garden_map.test.app-core-1.5.0-1 C:\Users\Dominik\.gradle\caches\transforms-3\bc46597316c03752c56ab85dfc60effe\transformed\core-1.5.0\res
-com.example.garden_map.test.app-androidTest-2 C:\Users\Dominik\AndroidStudioProjects\garden_map\app\build\generated\res\resValues\androidTest\debug
-com.example.garden_map.test.app-mergeDebugAndroidTestResources-3 C:\Users\Dominik\AndroidStudioProjects\garden_map\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
-com.example.garden_map.test.app-mergeDebugAndroidTestResources-4 C:\Users\Dominik\AndroidStudioProjects\garden_map\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
-com.example.garden_map.test.app-debugAndroidTest-5 C:\Users\Dominik\AndroidStudioProjects\garden_map\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

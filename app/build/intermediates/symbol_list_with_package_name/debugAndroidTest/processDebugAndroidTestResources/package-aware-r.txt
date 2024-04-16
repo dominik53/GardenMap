@@ -1,3 +1,0 @@
-com.example.garden_map.test
-style WhiteBackgroundDialogTheme
-style WhiteBackgroundTheme
