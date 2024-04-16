@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
     }
+    //nadkomentarz
 //testowanie123123123
     //podkomentarz
     override fun onMapReady(googleMap: GoogleMap) {
