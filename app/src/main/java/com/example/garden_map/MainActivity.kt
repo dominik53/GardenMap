@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
     //nadkomentarz
 //testowanie123123123
+    //podkomentarz
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
     }
