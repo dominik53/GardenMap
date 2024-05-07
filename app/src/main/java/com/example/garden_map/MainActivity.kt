@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mapFragment: SupportMapFragment
     private var mGoogleMap:GoogleMap? = null
     private val markerPositions: MutableList<LatLng> = mutableListOf()
+    val init = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +60,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         val appBarConfiguration = AppBarConfiguration(setOf(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications))
+            R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications))
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
@@ -93,6 +94,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // Get the current location
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 location?.let {
+
                     val currentLatLng = LatLng(location.latitude, location.longitude)
 
                     // Add a marker to the map at the current location
@@ -101,23 +103,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             .position(currentLatLng)
                             .title("Waypoint")
                     )
+
+                    // Add marker position to the list and save it
+                    addMarkerPosition(currentLatLng)
                     saveMarkerPositions()
                     logSharedPreferencesData()
+
                 }
             }
         }
 
     }
 
-    override fun onStop() {
-        super.onStop()
-        saveMarkerPositions() // Save markers before closing the app
-    }
-
-    override fun onStart() {
-        super.onStart()
-        loadMarkers() // Load saved markers when the app starts
-    }
 
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
@@ -138,6 +135,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
         }
+
+        loadMarkers()
     }
 
 
@@ -217,10 +216,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
         val markerCount = sharedPreferences.getInt("marker_count", 0)
         val googleMap = mGoogleMap ?: return
+
+        Log.d("SharedPreferences", "------------------- Marker count: $markerCount")
+
         for (i in 0 until markerCount) {
             val latLngString = sharedPreferences.getString("marker_$i", null) ?: continue
             val (lat, lng) = latLngString.split(",").map { it.toDouble() }
             val markerLatLng = LatLng(lat, lng)
+
+            addMarkerPosition(markerLatLng)
+
             googleMap.addMarker(
                 MarkerOptions()
                     .position(markerLatLng)
@@ -236,10 +241,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun logSharedPreferencesData() {
         val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
         val markerCount = sharedPreferences.getInt("marker_count", 0)
+        Log.d("SharedPreferences", "LOGS:")
         for (i in 0 until markerCount) {
             val latLngString = sharedPreferences.getString("marker_$i", null)
             Log.d("SharedPreferences", "Marker $i: $latLngString")
         }
     }
 }
-
