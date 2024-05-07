@@ -1,13 +1,13 @@
 package com.example.garden_map
 
 import android.os.Bundle
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.garden_map.databinding.ActivityMainBinding
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -15,7 +15,7 @@ import com.google.android.gms.maps.SupportMapFragment
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var binding: ActivityMainBinding
-    private var mGoogleMap:GoogleMap? = null
+    private var mGoogleMap: GoogleMap? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,16 +29,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         val appBarConfiguration = AppBarConfiguration(setOf(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications))
+            R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications))
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
-        val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
-        mapFragment.getMapAsync(this)
+        // Sprawdź, czy aktualny fragment to HomeFragment, a następnie
+        // dodaj mapę tylko wtedy, gdy jesteś na tej zakładce
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.navigation_home) {
+                val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment)
+                if (mapFragment != null && mapFragment is SupportMapFragment) {
+                    mapFragment.getMapAsync(this@MainActivity)
+                }
+            }
+        }
     }
-    //nadkomentarz
 
-    //podkomentarz
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
     }
