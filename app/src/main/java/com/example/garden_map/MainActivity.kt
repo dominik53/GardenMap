@@ -22,7 +22,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 import android.widget.Button
 import androidx.fragment.app.FragmentTransaction
 import android.view.View
-
+import android.content.Context
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var binding: ActivityMainBinding
     private lateinit var mapFragment: SupportMapFragment
     private var mGoogleMap:GoogleMap? = null
-
+    private val markerPositions: MutableList<LatLng> = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,6 +106,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     }
 
+    override fun onStop() {
+        super.onStop()
+        saveMarkerPositions() // Save markers before closing the app
+    }
+
+    override fun onStart() {
+        super.onStart()
+        loadMarkers() // Load saved markers when the app starts
+    }
+
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
 
@@ -133,7 +143,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .addOnSuccessListener { location ->
                 // Got last known location. In some rare situations, this can be null.
                 if (location != null) {
-                    // Use location.latitude and location.longitude to get the user's location
+                    val currentLatLng = LatLng(location.latitude, location.longitude)
+                    mGoogleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, DEFAULT_ZOOM))
                 }
             }
     }
@@ -181,6 +192,42 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun hideWaypointButton() {
         val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
         addWaypointButton.visibility = View.GONE
+    }
+
+    // Function to save marker positions to SharedPreferences
+    private fun saveMarkerPositions() {
+        // Ensure proper reference to the Context class
+        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.clear() // Clear existing markers before saving new ones
+        markerPositions.forEachIndexed { index, latLng ->
+            val latLngString = "${latLng.latitude},${latLng.longitude}"
+            editor.putString("marker_$index", latLngString)
+        }
+        editor.putInt("marker_count", markerPositions.size)
+        editor.apply()
+    }
+
+    // Function to load markers from SharedPreferences
+    private fun loadMarkers() {
+        // Ensure proper reference to the Context class
+        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
+        val markerCount = sharedPreferences.getInt("marker_count", 0)
+        val googleMap = mGoogleMap ?: return
+        for (i in 0 until markerCount) {
+            val latLngString = sharedPreferences.getString("marker_$i", null) ?: continue
+            val (lat, lng) = latLngString.split(",").map { it.toDouble() }
+            val markerLatLng = LatLng(lat, lng)
+            googleMap.addMarker(
+                MarkerOptions()
+                    .position(markerLatLng)
+                    .title("Waypoint")
+            )
+        }
+    }
+
+    private fun addMarkerPosition(markerLatLng: LatLng) {
+        markerPositions.add(markerLatLng)
     }
 
 }
