@@ -20,14 +20,16 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.MarkerOptions
 import android.widget.Button
+import androidx.fragment.app.FragmentTransaction
+import android.view.View
 
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var binding: ActivityMainBinding
+    private lateinit var mapFragment: SupportMapFragment
     private var mGoogleMap:GoogleMap? = null
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,8 +39,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(binding.root)
 
         val navView: BottomNavigationView = binding.navView
-
         val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        // Initialize mapFragment
+        mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
+
+        // Listen for destination changes
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            // Show or hide the map fragment based on the current destination
+            if (destination.id == R.id.navigation_home) {
+                showMapFragment()
+                showWaypointButton()
+            } else {
+                hideMapFragment()
+                hideWaypointButton()
+            }
+        }
+
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         val appBarConfiguration = AppBarConfiguration(setOf(
@@ -48,6 +64,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
 
         /* LOKALIZACJA */
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -142,6 +159,29 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         private const val DEFAULT_ZOOM = 15f
     }
 
+    private fun showMapFragment() {
+        // Show the map fragment
+        val transaction = supportFragmentManager.beginTransaction()
+        transaction.show(mapFragment)
+        transaction.commit()
+    }
+
+    private fun hideMapFragment() {
+        // Hide the map fragment
+        val transaction = supportFragmentManager.beginTransaction()
+        transaction.hide(mapFragment)
+        transaction.commit()
+    }
+
+    private fun showWaypointButton() {
+        val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
+        addWaypointButton.visibility = View.VISIBLE
+    }
+
+    private fun hideWaypointButton() {
+        val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
+        addWaypointButton.visibility = View.GONE
+    }
 
 }
 
