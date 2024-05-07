@@ -23,6 +23,7 @@ import android.widget.Button
 import androidx.fragment.app.FragmentTransaction
 import android.view.View
 import android.content.Context
+import android.util.Log
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -100,6 +101,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             .position(currentLatLng)
                             .title("Waypoint")
                     )
+                    saveMarkerPositions()
+                    logSharedPreferencesData()
                 }
             }
         }
@@ -230,5 +233,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         markerPositions.add(markerLatLng)
     }
 
+    private fun logSharedPreferencesData() {
+        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
+        val markerCount = sharedPreferences.getInt("marker_count", 0)
+        for (i in 0 until markerCount) {
+            val latLngString = sharedPreferences.getString("marker_$i", null)
+            Log.d("SharedPreferences", "Marker $i: $latLngString")
+        }
+    }
 }
 
