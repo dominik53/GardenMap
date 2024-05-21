@@ -316,3 +316,5 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
     }
 
 }
+
+//Bartek code
