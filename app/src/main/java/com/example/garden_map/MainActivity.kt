@@ -315,18 +315,4 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         }
     }
 
-    private fun convertCoordinatesToString(): String {
-        val stringBuilder = StringBuilder()
-
-        for (latLng in markerPositions) {
-            stringBuilder.append("${latLng.latitude},${latLng.longitude};") // Separatorem może być np. średnik
-        }
-
-        // Usuń ostatni znak separatora, jeśli istnieje
-        if (stringBuilder.isNotEmpty()) {
-            stringBuilder.deleteCharAt(stringBuilder.length - 1)
-        }
-
-        return stringBuilder.toString()
-    }
 }
