@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         }
     }
 
-    // Funkcja do łączenia pierwszego i ostatniego markera liniami
+    // Funkcja do łączenia pierwszego i ostatniego markera liniami :
     private fun connectFirstAndLastMarker() {
         val googleMap = mGoogleMap ?: return
         if (markerPositions.size > 1) {
