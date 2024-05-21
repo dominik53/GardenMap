@@ -24,15 +24,17 @@ import androidx.fragment.app.FragmentTransaction
 import android.view.View
 import android.content.Context
 import android.util.Log
+import com.example.garden_map.ui.dashboard.DashboardFragment
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.OnButtonClickListener {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var binding: ActivityMainBinding
     private lateinit var mapFragment: SupportMapFragment
     private var mGoogleMap:GoogleMap? = null
     private val markerPositions: MutableList<LatLng> = mutableListOf()
-    val init = 1
+    private var showAddButton = 0
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,7 +52,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // Show or hide the map fragment based on the current destination
             if (destination.id == R.id.navigation_home) {
                 showMapFragment()
-                showWaypointButton()
+                if(showAddButton == 1)
+                    showWaypointButton()
+
             } else {
                 hideMapFragment()
                 hideWaypointButton()
@@ -59,9 +63,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
-        val appBarConfiguration = AppBarConfiguration(setOf(
-            R.id.navigation_home, R.id.navigation_dashboard))
-        setupActionBarWithNavController(navController, appBarConfiguration)
+//        val appBarConfiguration = AppBarConfiguration(setOf(
+//            R.id.navigation_home, R.id.navigation_dashboard))
+//        setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
@@ -139,6 +143,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         loadMarkers()
     }
 
+    override fun onButton1Click() {
+        eraseMarkers()
+    }
+
+    override fun onButton2Click() {
+        val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
+
+        if (showAddButton == 0) {
+            showAddButton = 1
+        } else {
+            showAddButton = 0
+        }
+    }
+
+    private fun eraseMarkers() {
+        mGoogleMap?.clear() // This clears all markers from the map
+        markerPositions.clear() // This clears the marker positions list
+        saveMarkerPositions() // Save the cleared state to SharedPreferences
+
+        Log.d("DEV", "------------------- Markers erased...")
+    }
 
     private fun getLastLocation() {
         fusedLocationClient.lastLocation
