@@ -25,6 +25,7 @@ import android.view.View
 import android.content.Context
 import android.util.Log
 import com.example.garden_map.ui.dashboard.DashboardFragment
+import com.google.android.gms.maps.model.PolylineOptions
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.OnButtonClickListener {
 
@@ -61,11 +62,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
             }
         }
 
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
-//        val appBarConfiguration = AppBarConfiguration(setOf(
-//            R.id.navigation_home, R.id.navigation_dashboard))
-//        setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
@@ -112,7 +108,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                     addMarkerPosition(currentLatLng)
                     saveMarkerPositions()
                     logSharedPreferencesData()
-
+                    connectMarkers()
                 }
             }
         }
@@ -141,6 +137,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         }
 
         loadMarkers()
+        connectAllMarkers()
+        connectFirstAndLastMarker()
+        logMarkerData()
     }
 
     override fun onButton1Click() {
@@ -153,6 +152,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         if (showAddButton == 0) {
             showAddButton = 1
         } else {
+            connectFirstAndLastMarker()
             showAddButton = 0
         }
     }
@@ -271,5 +271,62 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
             val latLngString = sharedPreferences.getString("marker_$i", null)
             Log.d("SharedPreferences", "Marker $i: $latLngString")
         }
+    }
+
+    private fun logMarkerData() {
+        val googleMap = mGoogleMap ?: return
+        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
+        val markerCount = sharedPreferences.getInt("marker_count", 0)
+        for (i in 0 until markerCount) {
+            Log.d("DEV", "Marker $i: ${markerPositions.get(i)}")
+        }
+    }
+
+    private fun connectMarkers() {
+        val googleMap = mGoogleMap ?: return
+        if (markerPositions.size > 1) {
+            val lastLatLng = markerPositions[markerPositions.size - 2]
+            val currentLatLng = markerPositions.last()
+            googleMap.addPolyline(PolylineOptions().add(lastLatLng, currentLatLng))
+        }
+    }
+
+    private fun connectAllMarkers() {
+        val googleMap = mGoogleMap ?: return
+        if (markerPositions.size > 1) {
+            for (i in 0 until markerPositions.size - 1) {
+                val start = markerPositions[i]
+                val end = markerPositions[i + 1]
+                googleMap.addPolyline(PolylineOptions().add(start, end))
+            }
+        }
+    }
+
+    // Funkcja do łączenia pierwszego i ostatniego markera liniami
+    private fun connectFirstAndLastMarker() {
+        val googleMap = mGoogleMap ?: return
+        if (markerPositions.size > 1) {
+            val firstLatLng = markerPositions.first()
+            val lastLatLng = markerPositions.last()
+            Log.d("DEV", "------------- Marker first: $firstLatLng")
+            Log.d("DEV", "------------- Marker last: $lastLatLng")
+
+            googleMap.addPolyline(PolylineOptions().add(lastLatLng, firstLatLng))
+        }
+    }
+
+    private fun convertCoordinatesToString(): String {
+        val stringBuilder = StringBuilder()
+
+        for (latLng in markerPositions) {
+            stringBuilder.append("${latLng.latitude},${latLng.longitude};") // Separatorem może być np. średnik
+        }
+
+        // Usuń ostatni znak separatora, jeśli istnieje
+        if (stringBuilder.isNotEmpty()) {
+            stringBuilder.deleteCharAt(stringBuilder.length - 1)
+        }
+
+        return stringBuilder.toString()
     }
 }
