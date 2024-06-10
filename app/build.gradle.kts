@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation("com.google.android.gms:play-services-location:18.0.0")
+    implementation("com.google.code.gson:gson:2.8.8")
 
     implementation(libs.play.services.maps)
 

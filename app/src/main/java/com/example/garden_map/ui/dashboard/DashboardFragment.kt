@@ -37,9 +37,9 @@ class DashboardFragment : Fragment() {
 
         val textView2: TextView = binding.textView2
         textView2.text = if (showAddMarkerButton == 0) {
-            "Rozpocznij malowanie granic"
+            "Edytuj granice"
         } else {
-            "Zakończ malowanie granic"
+            "Zakończ edytowanie granic"
         }
 
         // Find buttons by their IDs
@@ -73,9 +73,9 @@ class DashboardFragment : Fragment() {
         showAddMarkerButton = if (showAddMarkerButton == 0) 1 else 0
         val textView2: TextView = binding.textView2
         textView2.text = if (showAddMarkerButton == 0) {
-            "Rozpocznij malowanie granic"
+            "Edytuj granice"
         } else {
-            "Zakończ malowanie granic"
+            "Zakończ edytowanie granic"
         }
     }
 

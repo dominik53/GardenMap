@@ -25,7 +25,11 @@ import android.view.View
 import android.content.Context
 import android.util.Log
 import com.example.garden_map.ui.dashboard.DashboardFragment
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.OnButtonClickListener {
 
@@ -35,7 +39,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
     private var mGoogleMap:GoogleMap? = null
     private val markerPositions: MutableList<LatLng> = mutableListOf()
     private var showAddButton = 0
-
+    val borderMarkerAlpha = 0.2
+    data class BorderMarkersStructure(var uniqueId: Int, var borderId: Int, var borderMarkerId: Int, var markerName: String, var latitude: Double, var longitude: Double)
+    data class TreeMarkersStructure(var uniqueId: Int, var borderId: Int, var name: String, var date: String, var latitude: Double, var longitude: Double)
+    var BorderMarkers = mutableListOf<BorderMarkersStructure>()
+    var drawingNewBorder = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,7 +75,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-
         /* LOKALIZACJA */
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -88,33 +95,61 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
             getLastLocation()
         }
 
-        // WAYPOINT (MARKER)
+        // MARKER LOKALIZACJI
         val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
         addWaypointButton.setOnClickListener {
             // Get the current location
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 location?.let {
-
                     val currentLatLng = LatLng(location.latitude, location.longitude)
 
+                    addNewBorderMarker(BorderMarkers, currentLatLng.latitude, currentLatLng.longitude)
+                    saveList(this, "BorderMarkers", BorderMarkers)
+                    printBorderMarkers(BorderMarkers)
+
                     // Add a marker to the map at the current location
-                    mGoogleMap?.addMarker(
+                    val mapMarker = mGoogleMap?.addMarker(
                         MarkerOptions()
                             .position(currentLatLng)
-                            .title("Waypoint")
+                            .title(BorderMarkers.last().markerName)
+                            .visible(true)
+                            .draggable(true)
+                            .alpha(borderMarkerAlpha.toFloat())
                     )
+                    mapMarker?.tag = BorderMarkers.last().uniqueId
 
-                    // Add marker position to the list and save it
-                    addMarkerPosition(currentLatLng)
-                    saveMarkerPositions()
-                    logSharedPreferencesData()
-                    connectMarkers()
+                    connectMarkersWithoutClosingLoop(BorderMarkers, getMaxBorderId(BorderMarkers))
                 }
             }
         }
 
     }
 
+    private fun addNewBorderMarker(borderMarkersList: List<BorderMarkersStructure>, latitude: Double, longitude: Double){
+        var newBorder = getMaxBorderId(borderMarkersList);
+
+        if(drawingNewBorder) {
+            newBorder += 1
+            drawingNewBorder = false
+        }
+
+        val newId = getMaxBorderMarkerIdForBorderId(borderMarkersList,newBorder)+1
+        val markerName1 = "Border "
+        val markerName2 = " marker "
+        val newMarkerName = markerName1.plus(newBorder.toString()).plus(markerName2).plus(newId.toString())
+        addBorderMarkerPosition(newBorder, newId, newMarkerName, latitude, longitude, getMaxUniqueId(BorderMarkers)+1)
+    }
+    private fun getMaxBorderMarkerIdForBorderId(borderMarkersList: List<BorderMarkersStructure>, borderId: Int): Int {
+        // Filter the list to include only the elements with the specified borderId
+        val filteredList = borderMarkersList.filter { it.borderId == borderId }
+
+        // Find the maximum borderMarkerId within the filtered list
+        return filteredList.maxByOrNull { it.borderMarkerId }?.borderMarkerId ?: -1
+    }
+
+    private fun getMaxBorderId(borderMarkersList: List<BorderMarkersStructure>): Int {
+        return borderMarkersList.maxByOrNull { it.borderId }?.borderId ?: 0
+    }
 
     override fun onMapReady(googleMap: GoogleMap) {
         mGoogleMap = googleMap
@@ -136,10 +171,45 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
             }
         }
 
-        loadMarkers()
-        connectAllMarkers()
-        connectFirstAndLastMarker()
-        logMarkerData()
+        // Set the listener for marker drag end
+        mGoogleMap?.setOnMarkerDragListener(object : GoogleMap.OnMarkerDragListener {
+            override fun onMarkerDragStart(marker: Marker) {
+                // Handle the event when the drag starts
+            }
+
+            override fun onMarkerDrag(marker: Marker) {
+                // Handle the event while the marker is being dragged
+            }
+
+            override fun onMarkerDragEnd(marker: Marker) {
+                if(showAddButton == 1)
+                {
+                    val position = marker.position
+                    val uniqueId = marker.tag as? Int
+                    uniqueId?.let {
+                        updateMarkerPosition(BorderMarkers, uniqueId, position.latitude, position.longitude)
+                    }
+                    val myBorder = findBorderIdByUniqueId(BorderMarkers, marker.tag)
+                    if(myBorder >= 0){
+                        mGoogleMap?.clear()
+                        connectAllMarkersWithoutBorder(BorderMarkers, myBorder)
+                        connectMarkersWithoutClosingLoop(BorderMarkers, myBorder)
+                        showAllBorderMarkers(BorderMarkers)
+                    }
+                }
+                else
+                {
+                    //todo przesuwanie drzew
+                }
+
+            }
+        })
+
+        BorderMarkers = getList(this, "BorderMarkers")
+//        showAllBorderMarkers(BorderMarkers)
+        connectAllMarkers(BorderMarkers)
+
+        printBorderMarkers(BorderMarkers)
     }
 
     override fun onButton1Click() {
@@ -151,16 +221,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
 
         if (showAddButton == 0) {
             showAddButton = 1
+            drawingNewBorder = true
+            showAllBorderMarkers(BorderMarkers)
         } else {
-            connectFirstAndLastMarker()
+//            connectFirstAndLastMarker(BorderMarkers, getMaxBorderId(BorderMarkers))
+            mGoogleMap?.clear()
+            connectAllMarkers(BorderMarkers)
+
             showAddButton = 0
+            drawingNewBorder = false
         }
     }
 
     private fun eraseMarkers() {
         mGoogleMap?.clear() // This clears all markers from the map
-        markerPositions.clear() // This clears the marker positions list
-        saveMarkerPositions() // Save the cleared state to SharedPreferences
+        BorderMarkers.clear()
+        saveList(this, "BorderMarkers", BorderMarkers) // Save the cleared state to SharedPreferences
 
         Log.d("DEV", "------------------- Markers erased...")
     }
@@ -221,98 +297,182 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         addWaypointButton.visibility = View.GONE
     }
 
-    // Function to save marker positions to SharedPreferences
-    private fun saveMarkerPositions() {
-        // Ensure proper reference to the Context class
-        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        editor.clear() // Clear existing markers before saving new ones
-        markerPositions.forEachIndexed { index, latLng ->
-            val latLngString = "${latLng.latitude},${latLng.longitude}"
-            editor.putString("marker_$index", latLngString)
-        }
-        editor.putInt("marker_count", markerPositions.size)
-        editor.apply()
+    // Function to retrieve a list of BorderMarkersStructure from SharedPreferences
+    private fun getList(context: Context, key: String): MutableList<BorderMarkersStructure> {
+        val gson = Gson()
+        val prefs = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
+        val json = prefs.getString(key, null)
+        val type = object : TypeToken<MutableList<BorderMarkersStructure>>() {}.type
+        return gson.fromJson(json, type) ?: mutableListOf()
     }
 
-    // Function to load markers from SharedPreferences
-    private fun loadMarkers() {
-        // Ensure proper reference to the Context class
-        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
-        val markerCount = sharedPreferences.getInt("marker_count", 0)
+    private fun saveList(context: Context, key: String, list: MutableList<BorderMarkersStructure>) {
+        val gson = Gson()
+        val json = gson.toJson(list)
+        val prefs = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString(key, json).apply()
+    }
+
+    private fun addBorderMarkerPosition(borderID: Int, markerID: Int, name: String, lat: Double, long: Double, id: Int) {
+        val newMarker = BorderMarkersStructure(id, borderID, markerID, name, lat, long)
+        BorderMarkers.add(newMarker)
+    }
+
+    private fun connectAllMarkers(borderMarkersList: List<BorderMarkersStructure>) {
+        // Extract all unique borderId values
+        val uniqueBorderIds = borderMarkersList.map { it.borderId }.distinct()
+
+        // Iterate through each unique borderId and connect markers
+        for (borderId in uniqueBorderIds) {
+            connectMarkersWithSameBorderId(borderMarkersList, borderId)
+        }
+    }
+
+    private fun connectAllMarkersWithoutBorder(borderMarkersList: MutableList<BorderMarkersStructure>, borderIdToRemove: Int){
+        var uniqueBorderIds = borderMarkersList.map { it.borderId }.distinct()
+        println("Unique Border IDs before filtering: $uniqueBorderIds")
+        uniqueBorderIds = uniqueBorderIds.filter { it != borderIdToRemove }.toMutableList()
+        println("Unique Border IDs after filtering: $uniqueBorderIds")
+        for (borderId in uniqueBorderIds) {
+            connectMarkersWithSameBorderId(borderMarkersList, borderId)
+        }
+    }
+
+
+    private fun getMaxUniqueId(borderMarkersList: List<BorderMarkersStructure>): Int {
+        return borderMarkersList.maxByOrNull { it.uniqueId }?.uniqueId ?: 0
+    }
+
+
+    private fun connectMarkersWithSameBorderId(borderMarkersList: List<BorderMarkersStructure>, borderId: Int) {
         val googleMap = mGoogleMap ?: return
+        val polylineOptions = PolylineOptions()
 
-        Log.d("SharedPreferences", "------------------- Marker count: $markerCount")
+        // Filter the list to include only markers with the specified borderId
+        val filteredList = borderMarkersList.filter { it.borderId == borderId }
 
-        for (i in 0 until markerCount) {
-            val latLngString = sharedPreferences.getString("marker_$i", null) ?: continue
-            val (lat, lng) = latLngString.split(",").map { it.toDouble() }
-            val markerLatLng = LatLng(lat, lng)
-
-            addMarkerPosition(markerLatLng)
-
-            googleMap.addMarker(
-                MarkerOptions()
-                    .position(markerLatLng)
-                    .title("Waypoint")
-            )
-        }
-    }
-
-    private fun addMarkerPosition(markerLatLng: LatLng) {
-        markerPositions.add(markerLatLng)
-    }
-
-    private fun logSharedPreferencesData() {
-        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
-        val markerCount = sharedPreferences.getInt("marker_count", 0)
-        Log.d("SharedPreferences", "LOGS:")
-        for (i in 0 until markerCount) {
-            val latLngString = sharedPreferences.getString("marker_$i", null)
-            Log.d("SharedPreferences", "Marker $i: $latLngString")
-        }
-    }
-
-    private fun logMarkerData() {
-        val googleMap = mGoogleMap ?: return
-        val sharedPreferences = this.getSharedPreferences("Markers", Context.MODE_PRIVATE)
-        val markerCount = sharedPreferences.getInt("marker_count", 0)
-        for (i in 0 until markerCount) {
-            Log.d("DEV", "Marker $i: ${markerPositions.get(i)}")
-        }
-    }
-
-    private fun connectMarkers() {
-        val googleMap = mGoogleMap ?: return
-        if (markerPositions.size > 1) {
-            val lastLatLng = markerPositions[markerPositions.size - 2]
-            val currentLatLng = markerPositions.last()
-            googleMap.addPolyline(PolylineOptions().add(lastLatLng, currentLatLng))
-        }
-    }
-
-    private fun connectAllMarkers() {
-        val googleMap = mGoogleMap ?: return
-        if (markerPositions.size > 1) {
-            for (i in 0 until markerPositions.size - 1) {
-                val start = markerPositions[i]
-                val end = markerPositions[i + 1]
-                googleMap.addPolyline(PolylineOptions().add(start, end))
+        if (filteredList.isNotEmpty()) {
+            // Connect markers in a circular manner
+            for (i in filteredList.indices) {
+                val currentBorderMarker = filteredList[i]
+                val nextBorderMarker = filteredList[(i + 1) % filteredList.size]
+                val currentLatLng = LatLng(currentBorderMarker.latitude, currentBorderMarker.longitude)
+                val nextLatLng = LatLng(nextBorderMarker.latitude, nextBorderMarker.longitude)
+                polylineOptions.add(currentLatLng, nextLatLng)
             }
+
+            // Connect the last marker back to the first marker
+            val firstBorderMarker = filteredList.first()
+            val lastBorderMarker = filteredList.last()
+            val firstLatLng = LatLng(firstBorderMarker.latitude, firstBorderMarker.longitude)
+            val lastLatLng = LatLng(lastBorderMarker.latitude, lastBorderMarker.longitude)
+            polylineOptions.add(lastLatLng, firstLatLng)
+
+            // Add the polyline to the map
+            googleMap.addPolyline(polylineOptions)
         }
     }
 
-    // Funkcja do łączenia pierwszego i ostatniego markera liniami
-    private fun connectFirstAndLastMarker() {
+    private fun connectFirstAndLastMarker(borderMarkersList: List<BorderMarkersStructure>, borderId: Int) {
         val googleMap = mGoogleMap ?: return
-        if (markerPositions.size > 1) {
-            val firstLatLng = markerPositions.first()
-            val lastLatLng = markerPositions.last()
-            Log.d("DEV", "------------- Marker first: $firstLatLng")
-            Log.d("DEV", "------------- Marker last: $lastLatLng")
+        val polylineOptions = PolylineOptions()
 
-            googleMap.addPolyline(PolylineOptions().add(lastLatLng, firstLatLng))
+        // Filter the list to include only markers with the specified borderId
+        val filteredList = borderMarkersList.filter { it.borderId == borderId }
+
+        if (filteredList.isNotEmpty()) {
+            // Connect the last marker back to the first marker
+            val firstBorderMarker = filteredList.first()
+            val lastBorderMarker = filteredList.last()
+            val firstLatLng = LatLng(firstBorderMarker.latitude, firstBorderMarker.longitude)
+            val lastLatLng = LatLng(lastBorderMarker.latitude, lastBorderMarker.longitude)
+            polylineOptions.add(lastLatLng, firstLatLng)
+
+            // Add the polyline to the map
+            googleMap.addPolyline(polylineOptions)
         }
     }
+
+    private fun connectMarkersWithoutClosingLoop(borderMarkersList: List<BorderMarkersStructure>, borderId: Int) {
+        val googleMap = mGoogleMap ?: return
+        val polylineOptions = PolylineOptions()
+
+        // Filter the list to include only markers with the specified borderId
+        val filteredList = borderMarkersList.filter { it.borderId == borderId }
+
+        if (filteredList.size > 1) {
+            // Connect markers except for the last one
+            for (i in 0 until filteredList.size - 1) {
+                val currentBorderMarker = filteredList[i]
+                val nextBorderMarker = filteredList[i + 1]
+                val currentLatLng = LatLng(currentBorderMarker.latitude, currentBorderMarker.longitude)
+                val nextLatLng = LatLng(nextBorderMarker.latitude, nextBorderMarker.longitude)
+                polylineOptions.add(currentLatLng, nextLatLng)
+            }
+
+            // Add the polyline to the map
+            googleMap.addPolyline(polylineOptions)
+        }
+    }
+
+    private fun updateMarkerPosition(
+        borderMarkersList: MutableList<BorderMarkersStructure>,
+        uniqueId: Int,
+        newLatitude: Double,
+        newLongitude: Double
+    ) {
+        borderMarkersList.find { it.uniqueId == uniqueId }?.let { marker ->
+            marker.latitude = newLatitude
+            marker.longitude = newLongitude
+            println("Updated Marker with uniqueId $uniqueId to new position: ($newLatitude, $newLongitude)")
+        }
+
+        saveList(this, "BorderMarkers", borderMarkersList)
+
+//        val googleMap = mGoogleMap ?: return
+//        googleMap.clear()
+//
+//        showAllBorderMarkers(borderMarkersList)
+//        connectAllMarkers(borderMarkersList)
+
+        printBorderMarkers(borderMarkersList)
+    }
+
+
+    private fun showAllBorderMarkers(borderMarkersList: List<BorderMarkersStructure>) {
+        val googleMap = mGoogleMap ?: return
+
+        borderMarkersList.forEach { marker ->
+            val position = LatLng(marker.latitude, marker.longitude)
+            val mapMarker = googleMap.addMarker(
+                MarkerOptions()
+                    .position(position)
+                    .title(marker.markerName)
+                    .visible(true)
+                    .draggable(true)
+                    .alpha(borderMarkerAlpha.toFloat())
+            )
+            mapMarker?.tag = marker.uniqueId
+        }
+    }
+
+    private fun printBorderMarkers(borderMarkersList: MutableList<BorderMarkersStructure>) {
+        borderMarkersList.forEach { marker ->
+            println("Border ID: ${marker.borderId}, Border Marker ID: ${marker.borderMarkerId}, Marker Name: ${marker.markerName}, Latitude: ${marker.latitude}, Longitude: ${marker.longitude}")
+        }
+        if(borderMarkersList.isEmpty()){
+            println("PUSTOO")
+        }
+    }
+
+    private fun findBorderIdByUniqueId(borderMarkersList: List<BorderMarkersStructure>, uniqueId: Any?): Int {
+        val borderMarker = borderMarkersList.find { it.uniqueId == uniqueId }
+        return borderMarker?.borderId ?: -1 // Return a default value if borderMarker is null
+    }
+
+
+    /*************************************  ************************************/
+    /*****************************************************************************/
+
 
 }
