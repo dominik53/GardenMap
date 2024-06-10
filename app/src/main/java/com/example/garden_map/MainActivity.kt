@@ -15,8 +15,6 @@ import android.widget.TextView
 import android.widget.Button
 
 
-
-
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private lateinit var map: GoogleMap
