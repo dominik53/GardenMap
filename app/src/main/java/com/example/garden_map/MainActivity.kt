@@ -112,6 +112,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
         val nameTextView = dialogView.findViewById<TextView>(R.id.tv_marker_name)
         val infoTextView = dialogView.findViewById<TextView>(R.id.tv_marker_info)
         val editButton = dialogView.findViewById<Button>(R.id.btn_edit_marker)
+        val deleteButton = dialogView.findViewById<Button>(R.id.btn_delete_marker)
 
         nameTextView.text = marker.title
         infoTextView.text = marker.snippet
@@ -124,7 +125,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMarker
             dialog.dismiss()
             showMarkerInfoDialog(marker)
         }
-    }
 
+        deleteButton.setOnClickListener {
+            marker.remove()
+            dialog.dismiss()
+        }
+    }
 
 }
