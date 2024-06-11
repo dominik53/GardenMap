@@ -118,6 +118,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                     )
                     mapMarker?.tag = BorderMarkers.last().uniqueId
 
+                    mGoogleMap?.clear()
+                    showAllBorderMarkers(BorderMarkers)
+                    connectAllMarkersWithoutBorder(BorderMarkers, getMaxBorderId(BorderMarkers))
                     connectMarkersWithoutClosingLoop(BorderMarkers, getMaxBorderId(BorderMarkers))
                 }
             }
@@ -204,6 +207,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
 
             }
         })
+
+//        mGoogleMap?.setOnMarkerClickListener {  } todo: do drzew
 
         BorderMarkers = getList(this, "BorderMarkers")
 //        showAllBorderMarkers(BorderMarkers)
@@ -349,7 +354,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         val polylineOptions = PolylineOptions()
 
         // Filter the list to include only markers with the specified borderId
-        val filteredList = borderMarkersList.filter { it.borderId == borderId }
+        var filteredList = borderMarkersList.filter { it.borderId == borderId }
+        filteredList = filteredList.sortedBy { it.borderMarkerId }
 
         if (filteredList.isNotEmpty()) {
             // Connect markers in a circular manner
