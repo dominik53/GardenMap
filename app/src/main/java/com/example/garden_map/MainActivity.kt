@@ -29,20 +29,25 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import android.widget.TextView
 
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.OnButtonClickListener {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.OnButtonClickListener, GoogleMap.OnMarkerClickListener {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var binding: ActivityMainBinding
     private lateinit var mapFragment: SupportMapFragment
     private var mGoogleMap:GoogleMap? = null
+    private var selectedMarker: Marker? = null
     private val markerPositions: MutableList<LatLng> = mutableListOf()
     private var showAddButton = 0
     val borderMarkerAlpha = 0.2
     data class BorderMarkersStructure(var uniqueId: Int, var borderId: Int, var borderMarkerId: Int, var markerName: String, var latitude: Double, var longitude: Double)
-    data class TreeMarkersStructure(var uniqueId: Int, var borderId: Int, var name: String, var date: String, var latitude: Double, var longitude: Double)
+    data class TreeMarkersStructure(var uniqueId: Int, var borderId: Int, var name: String, var datePlant: String, var dateHarvest: String, var latitude: Double, var longitude: Double)
     var BorderMarkers = mutableListOf<BorderMarkersStructure>()
+    var TreeMarkers = mutableListOf<TreeMarkersStructure>()
     var drawingNewBorder = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,6 +124,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                     mapMarker?.tag = BorderMarkers.last().uniqueId
 
                     mGoogleMap?.clear()
+                    showAllTreeMarkers(TreeMarkers)
                     showAllBorderMarkers(BorderMarkers)
                     connectAllMarkersWithoutBorder(BorderMarkers, getMaxBorderId(BorderMarkers))
                     connectMarkersWithoutClosingLoop(BorderMarkers, getMaxBorderId(BorderMarkers))
@@ -142,6 +148,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         val newMarkerName = markerName1.plus(newBorder.toString()).plus(markerName2).plus(newId.toString())
         addBorderMarkerPosition(newBorder, newId, newMarkerName, latitude, longitude, getMaxUniqueId(BorderMarkers)+1)
     }
+
     private fun getMaxBorderMarkerIdForBorderId(borderMarkersList: List<BorderMarkersStructure>, borderId: Int): Int {
         // Filter the list to include only the elements with the specified borderId
         val filteredList = borderMarkersList.filter { it.borderId == borderId }
@@ -195,6 +202,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                     val myBorder = findBorderIdByUniqueId(BorderMarkers, marker.tag)
                     if(myBorder >= 0){
                         mGoogleMap?.clear()
+                        showAllTreeMarkers(TreeMarkers)
                         connectAllMarkersWithoutBorder(BorderMarkers, myBorder)
                         connectMarkersWithoutClosingLoop(BorderMarkers, myBorder)
                         showAllBorderMarkers(BorderMarkers)
@@ -202,19 +210,143 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                 }
                 else
                 {
-                    //todo przesuwanie drzew
+                    val position = marker.position
+                    val uniqueId = marker.tag as? Int
+                    uniqueId?.let {
+                        updateTreeMarkerPosition(TreeMarkers, uniqueId, position.latitude, position.longitude)
+                    }
                 }
 
             }
         })
 
-//        mGoogleMap?.setOnMarkerClickListener {  } todo: do drzew
+        // Dodaj listener dla kliknięć na markery
+        mGoogleMap?.setOnMarkerClickListener(this)
+
+        // Dodaj listener dla kliknięć na mapę
+        mGoogleMap?.setOnMapClickListener { latLng ->
+            showAddMarkerDialog(latLng)
+        }
 
         BorderMarkers = getList(this, "BorderMarkers")
-//        showAllBorderMarkers(BorderMarkers)
+        TreeMarkers = getTrees(this, "TreeMarkers")
+        showAllTreeMarkers(TreeMarkers)
         connectAllMarkers(BorderMarkers)
 
+        printTreeMarkers(TreeMarkers)
         printBorderMarkers(BorderMarkers)
+    }
+
+    override fun onMarkerClick(marker: Marker): Boolean {
+        if(showAddButton == 0){
+            selectedMarker = marker
+            showMarkerDetailsDialog(marker)
+        }
+
+        return true
+    }
+
+    private fun showAddMarkerDialog(latLng: LatLng) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_marker, null)
+        val nameEditText = dialogView.findViewById<TextInputEditText>(R.id.et_name)
+        val datePlantedEditText = dialogView.findViewById<TextInputEditText>(R.id.et_date_planted)
+        val dateHarvestedEditText = dialogView.findViewById<TextInputEditText>(R.id.et_date_harvested)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Dodaj Marker")
+            .setView(dialogView)
+            .setPositiveButton("Dodaj") { _, _ ->
+                val name = nameEditText.text.toString()
+                val datePlanted = datePlantedEditText.text.toString()
+                val dateHarvested = dateHarvestedEditText.text.toString()
+
+                val newId = getMaxTreeUniqueId(TreeMarkers)+1
+                addTreeMarkerPosition(0, name, datePlanted, dateHarvested, latLng.latitude, latLng.longitude, newId)
+
+                val marker = mGoogleMap?.addMarker(
+                    MarkerOptions()
+                        .position(latLng)
+                        .title(name)
+                        .draggable(true)
+                        .snippet("Data zasadzenia: $datePlanted\nData zbioru: $dateHarvested")
+                )
+                marker?.tag = newId
+
+                marker?.showInfoWindow()
+
+                saveTrees(this, "TreeMarkers", TreeMarkers)
+                printTreeMarkers(TreeMarkers)
+            }
+            .setNegativeButton("Anuluj", null)
+            .show()
+    }
+
+    private fun showMarkerInfoDialog(marker: Marker) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_marker_info, null)
+        val nameEditText = dialogView.findViewById<TextInputEditText>(R.id.et_name)
+        val datePlantedEditText = dialogView.findViewById<TextInputEditText>(R.id.et_date_planted)
+        val dateHarvestedEditText = dialogView.findViewById<TextInputEditText>(R.id.et_date_harvested)
+
+        nameEditText.setText(marker.title)
+        val snippet = marker.snippet?.split("\n") ?: listOf("")
+        if (snippet.size >= 2) {
+            datePlantedEditText.setText(snippet[0].substringAfter(": "))
+            dateHarvestedEditText.setText(snippet[1].substringAfter(": "))
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Edytuj Marker")
+            .setView(dialogView)
+            .setPositiveButton("Zapisz") { _, _ ->
+                val name = nameEditText.text.toString()
+                val datePlanted = datePlantedEditText.text.toString()
+                val dateHarvested = dateHarvestedEditText.text.toString()
+
+                marker.title = name
+                marker.snippet = "Data zasadzenia: $datePlanted\nData zbioru: $dateHarvested"
+                marker.showInfoWindow()
+
+                TreeMarkers.find { it.uniqueId == marker.tag }?.let { marker ->
+                    marker.name = name
+                    marker.datePlant = datePlanted
+                    marker.dateHarvest = dateHarvested
+                }
+
+                saveTrees(this, "TreeMarkers", TreeMarkers)
+                printTreeMarkers(TreeMarkers)
+            }
+            .setNegativeButton("Anuluj", null)
+            .show()
+    }
+
+    private fun showMarkerDetailsDialog(marker: Marker) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_marker_details, null)
+        val nameTextView = dialogView.findViewById<TextView>(R.id.tv_marker_name)
+        val infoTextView = dialogView.findViewById<TextView>(R.id.tv_marker_info)
+        val editButton = dialogView.findViewById<Button>(R.id.btn_edit_marker)
+        val deleteButton = dialogView.findViewById<Button>(R.id.btn_delete_marker)
+
+        nameTextView.text = marker.title
+        infoTextView.text = marker.snippet
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .show()
+
+        editButton.setOnClickListener {
+            dialog.dismiss()
+            showMarkerInfoDialog(marker)
+        }
+        deleteButton.setOnClickListener {
+            val itemToRemove = TreeMarkers.find { it.uniqueId == marker.tag }
+            if (itemToRemove != null) {
+                TreeMarkers.remove(itemToRemove)
+            }
+            saveTrees(this, "TreeMarkers", TreeMarkers)
+
+            marker.remove()
+            dialog.dismiss()
+        }
     }
 
     override fun onButton1Click() {
@@ -227,10 +359,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         if (showAddButton == 0) {
             showAddButton = 1
             drawingNewBorder = true
-            showAllBorderMarkers(BorderMarkers)
-        } else {
-//            connectFirstAndLastMarker(BorderMarkers, getMaxBorderId(BorderMarkers))
+
             mGoogleMap?.clear()
+            showAllBorderMarkers(BorderMarkers)
+            connectAllMarkers(BorderMarkers)
+        } else {
+            mGoogleMap?.clear()
+            showAllTreeMarkers(TreeMarkers)
             connectAllMarkers(BorderMarkers)
 
             showAddButton = 0
@@ -307,7 +442,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         val gson = Gson()
         val prefs = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
         val json = prefs.getString(key, null)
+
         val type = object : TypeToken<MutableList<BorderMarkersStructure>>() {}.type
+        return gson.fromJson(json, type) ?: mutableListOf()
+    }
+
+    private fun getTrees(context: Context, key: String): MutableList<TreeMarkersStructure> {
+        val gson = Gson()
+        val prefs = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
+        val json = prefs.getString(key, null)
+
+        val type = object : TypeToken<MutableList<TreeMarkersStructure>>() {}.type
         return gson.fromJson(json, type) ?: mutableListOf()
     }
 
@@ -318,9 +463,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         prefs.edit().putString(key, json).apply()
     }
 
+    private fun saveTrees(context: Context, key: String, list: MutableList<TreeMarkersStructure>) {
+        val gson = Gson()
+        val json = gson.toJson(list)
+        val prefs = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString(key, json).apply()
+    }
+
+    private fun <T> loadList(context: Context, key: String, typeToken: TypeToken<MutableList<T>>): MutableList<T>? {
+        val prefs = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
+        val json = prefs.getString(key, null) ?: return null
+        val gson = Gson()
+        return gson.fromJson(json, typeToken.type)
+    }
+
     private fun addBorderMarkerPosition(borderID: Int, markerID: Int, name: String, lat: Double, long: Double, id: Int) {
         val newMarker = BorderMarkersStructure(id, borderID, markerID, name, lat, long)
         BorderMarkers.add(newMarker)
+    }
+
+    private fun addTreeMarkerPosition(borderID: Int, name: String, datePlant: String, dateHarvest: String,  lat: Double, long: Double, id: Int) {
+        val newMarker = TreeMarkersStructure(id, borderID, name, datePlant, dateHarvest, lat, long)
+        TreeMarkers.add(newMarker)
     }
 
     private fun connectAllMarkers(borderMarkersList: List<BorderMarkersStructure>) {
@@ -348,6 +512,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         return borderMarkersList.maxByOrNull { it.uniqueId }?.uniqueId ?: 0
     }
 
+    private fun getMaxTreeUniqueId(treeMarkersList: List<TreeMarkersStructure>): Int {
+        return treeMarkersList.maxByOrNull { it.uniqueId }?.uniqueId ?: 0
+    }
 
     private fun connectMarkersWithSameBorderId(borderMarkersList: List<BorderMarkersStructure>, borderId: Int) {
         val googleMap = mGoogleMap ?: return
@@ -367,26 +534,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                 polylineOptions.add(currentLatLng, nextLatLng)
             }
 
-            // Connect the last marker back to the first marker
-            val firstBorderMarker = filteredList.first()
-            val lastBorderMarker = filteredList.last()
-            val firstLatLng = LatLng(firstBorderMarker.latitude, firstBorderMarker.longitude)
-            val lastLatLng = LatLng(lastBorderMarker.latitude, lastBorderMarker.longitude)
-            polylineOptions.add(lastLatLng, firstLatLng)
-
-            // Add the polyline to the map
-            googleMap.addPolyline(polylineOptions)
-        }
-    }
-
-    private fun connectFirstAndLastMarker(borderMarkersList: List<BorderMarkersStructure>, borderId: Int) {
-        val googleMap = mGoogleMap ?: return
-        val polylineOptions = PolylineOptions()
-
-        // Filter the list to include only markers with the specified borderId
-        val filteredList = borderMarkersList.filter { it.borderId == borderId }
-
-        if (filteredList.isNotEmpty()) {
             // Connect the last marker back to the first marker
             val firstBorderMarker = filteredList.first()
             val lastBorderMarker = filteredList.last()
@@ -434,14 +581,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         }
 
         saveList(this, "BorderMarkers", borderMarkersList)
-
-//        val googleMap = mGoogleMap ?: return
-//        googleMap.clear()
-//
-//        showAllBorderMarkers(borderMarkersList)
-//        connectAllMarkers(borderMarkersList)
-
         printBorderMarkers(borderMarkersList)
+    }
+
+    private fun updateTreeMarkerPosition(
+        treeMarkersList: MutableList<TreeMarkersStructure>,
+        uniqueId: Int,
+        newLatitude: Double,
+        newLongitude: Double
+    ) {
+        treeMarkersList.find { it.uniqueId == uniqueId }?.let { marker ->
+            marker.latitude = newLatitude
+            marker.longitude = newLongitude
+            println("Updated Marker with uniqueId $uniqueId to new position: ($newLatitude, $newLongitude)")
+        }
+
+        saveTrees(this, "TreeMarkers", treeMarkersList)
+        printTreeMarkers(treeMarkersList)
     }
 
 
@@ -462,11 +618,41 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         }
     }
 
+    private fun showAllTreeMarkers(treeMarkersList: List<TreeMarkersStructure>) {
+        val googleMap = mGoogleMap ?: return
+
+        treeMarkersList.forEach { marker ->
+            val position = LatLng(marker.latitude, marker.longitude)
+            val plant = marker.datePlant
+            val harvest = marker.dateHarvest
+            val mapMarker = googleMap.addMarker(
+                MarkerOptions()
+                    .position(position)
+                    .title(marker.name)
+                    .visible(true)
+                    .draggable(true)
+                    .snippet("Data zasadzenia: $plant\nData zbioru: $harvest")
+            )
+            mapMarker?.tag = marker.uniqueId
+        }
+    }
+
     private fun printBorderMarkers(borderMarkersList: MutableList<BorderMarkersStructure>) {
+        println("Border markers:")
         borderMarkersList.forEach { marker ->
             println("Border ID: ${marker.borderId}, Border Marker ID: ${marker.borderMarkerId}, Marker Name: ${marker.markerName}, Latitude: ${marker.latitude}, Longitude: ${marker.longitude}")
         }
         if(borderMarkersList.isEmpty()){
+            println("PUSTOO")
+        }
+    }
+
+    private fun printTreeMarkers(treeMarkersList: MutableList<TreeMarkersStructure>) {
+        println("Tree markers:")
+        treeMarkersList.forEach { marker ->
+            println("id: ${marker.uniqueId}, name: ${marker.name}")
+        }
+        if(treeMarkersList.isEmpty()){
             println("PUSTOO")
         }
     }
