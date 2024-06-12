@@ -43,6 +43,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
     private var selectedMarker: Marker? = null
     private val markerPositions: MutableList<LatLng> = mutableListOf()
     private var showAddButton = 0
+    private lateinit var mainBinding: ActivityMainBinding
+    private var addTreeButton: Button? = null
+    private var addTreeButton1: Button? = null
     val borderMarkerAlpha = 0.2
     data class BorderMarkersStructure(var uniqueId: Int, var borderId: Int, var borderMarkerId: Int, var markerName: String, var latitude: Double, var longitude: Double)
     data class TreeMarkersStructure(var uniqueId: Int, var borderId: Int, var name: String, var datePlant: String, var dateHarvest: String, var latitude: Double, var longitude: Double)
@@ -55,6 +58,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        addTreeButton1 = findViewById(R.id.addTreeButton)
+
+        // Przypisanie przycisku button3
+        val button3 = findViewById<Button>(R.id.button3)
+        button3.setOnClickListener {
+            onButton3Click()
+        }
 
         val navView: BottomNavigationView = binding.navView
         val navController = findNavController(R.id.nav_host_fragment_activity_main)
@@ -373,6 +384,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         }
     }
 
+    private fun onButton3Click() {
+        if (addTreeButton1?.visibility == View.GONE) {
+            addTreeButton1?.visibility = View.VISIBLE
+        } else {
+            addTreeButton1?.visibility = View.GONE
+        }
+    }
+
+
     private fun eraseMarkers() {
         mGoogleMap?.clear() // This clears all markers from the map
         BorderMarkers.clear()
@@ -432,9 +452,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         addWaypointButton.visibility = View.VISIBLE
     }
 
+    private fun showTreesButton() {
+        val addTreeButton: Button = findViewById(R.id.addTreeButton)
+        addTreeButton.visibility = View.VISIBLE
+    }
+
     private fun hideWaypointButton() {
         val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
         addWaypointButton.visibility = View.GONE
+    }
+
+    private fun hideTreesButton() {
+        val addTreeButton: Button = findViewById(R.id.addTreeButton)
+        addTreeButton.visibility = View.GONE
     }
 
     // Function to retrieve a list of BorderMarkersStructure from SharedPreferences
