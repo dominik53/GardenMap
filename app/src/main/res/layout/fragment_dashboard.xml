@@ -83,7 +83,7 @@
         android:layout_width="280dp"
         android:layout_height="40dp"
         android:gravity="center_vertical"
-        android:text="3. opcja"
+        android:text="init"
         android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

@@ -18,6 +18,7 @@ class DashboardFragment : Fragment() {
 
     private var listener: OnButtonClickListener? = null
     private var showAddMarkerButton = 0
+    private var showAddTreeButton = 0
 
     override fun onCreateView(
             inflater: LayoutInflater,
@@ -33,6 +34,7 @@ class DashboardFragment : Fragment() {
         // reload showAddMarkerButton
         savedInstanceState?.let {
             showAddMarkerButton = it.getInt("showAddMarkerButton", 0)
+            showAddTreeButton = it.getInt("showAddTreeButton",0)
         }
 
         val textView2: TextView = binding.textView2
@@ -40,6 +42,13 @@ class DashboardFragment : Fragment() {
             "Edytuj granice"
         } else {
             "Zakończ edytowanie granic"
+        }
+
+        val textView3: TextView = binding.textView3
+        textView3.text = if (showAddTreeButton == 0) {
+            "Dodaj drzewa"
+        } else {
+            "Zakończ dodawanie drzew"
         }
 
         // Find buttons by their IDs
@@ -56,7 +65,8 @@ class DashboardFragment : Fragment() {
 
         val button3: Button = binding.button3
         button3.setOnClickListener {
-            // todo
+            toggleButton3Text()
+            listener?.onButton3Click()
         }
 
         return root
@@ -66,16 +76,28 @@ class DashboardFragment : Fragment() {
         super.onSaveInstanceState(outState)
         // Save the current value of showAddMarkerButton
         outState.putInt("showAddMarkerButton", showAddMarkerButton)
+        outState.putInt("showAddTreeButton", showAddTreeButton)
     }
 
     private fun toggleButton2Text() {
         // Toggle the value of showAddMarkerButton and update textView2 text accordingly
-        showAddMarkerButton = if (showAddMarkerButton == 0) 1 else 0
+        showAddMarkerButton = if (showAddMarkerButton == 0 && showAddTreeButton == 0) 1 else 0
         val textView2: TextView = binding.textView2
-        textView2.text = if (showAddMarkerButton == 0) {
+        textView2.text = if (showAddMarkerButton == 0 || showAddTreeButton == 1) {
             "Edytuj granice"
         } else {
             "Zakończ edytowanie granic"
+        }
+    }
+
+    private fun toggleButton3Text() {
+        // Toggle the value of showAddTreeButton and update textView3 text accordingly
+        showAddTreeButton = if (showAddTreeButton == 0 && showAddMarkerButton == 0) 1 else 0
+        val textView3: TextView = binding.textView3
+        textView3.text = if (showAddTreeButton == 0 || showAddMarkerButton == 1) {
+            "Dodaj drzewa"
+        } else {
+            "Zakończ dodawanie drzew"
         }
     }
 
@@ -101,5 +123,7 @@ class DashboardFragment : Fragment() {
     interface OnButtonClickListener {
         fun onButton1Click()
         fun onButton2Click()
+
+        fun onButton3Click()
     }
 }

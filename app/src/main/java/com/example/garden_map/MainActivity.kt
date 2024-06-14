@@ -43,6 +43,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
     private var selectedMarker: Marker? = null
     private val markerPositions: MutableList<LatLng> = mutableListOf()
     private var showAddButton = 0
+    private var showTreeButton = 0
     val borderMarkerAlpha = 0.2
     data class BorderMarkersStructure(var uniqueId: Int, var borderId: Int, var borderMarkerId: Int, var markerName: String, var latitude: Double, var longitude: Double)
     data class TreeMarkersStructure(var uniqueId: Int, var borderId: Int, var name: String, var datePlant: String, var dateHarvest: String, var latitude: Double, var longitude: Double)
@@ -68,6 +69,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                 showMapFragment()
                 if(showAddButton == 1)
                     showWaypointButton()
+                if(showTreeButton == 1)
+                    showTreeButton()
 
             } else {
                 hideMapFragment()
@@ -124,10 +127,43 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                     mapMarker?.tag = BorderMarkers.last().uniqueId
 
                     mGoogleMap?.clear()
-                    showAllTreeMarkers(TreeMarkers)
+                    if(showAddButton != 1)
+                        showAllTreeMarkers(TreeMarkers)
                     showAllBorderMarkers(BorderMarkers)
                     connectAllMarkersWithoutBorder(BorderMarkers, getMaxBorderId(BorderMarkers))
                     connectMarkersWithoutClosingLoop(BorderMarkers, getMaxBorderId(BorderMarkers))
+                }
+            }
+        }
+
+
+        val addTreeButton: Button = findViewById(R.id.addTreeButton)
+        addTreeButton.setOnClickListener{
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                location?.let {
+                    val currentLatLng = LatLng(location.latitude, location.longitude)
+                    //todo obsluga
+                    showAddMarkerDialog(currentLatLng)
+//                    addNewBorderMarker(BorderMarkers, currentLatLng.latitude, currentLatLng.longitude)
+//                    saveList(this, "BorderMarkers", BorderMarkers)
+//                    printBorderMarkers(BorderMarkers)
+//
+//                    // Add a marker to the map at the current location
+//                    val mapMarker = mGoogleMap?.addMarker(
+//                        MarkerOptions()
+//                            .position(currentLatLng)
+//                            .title(BorderMarkers.last().markerName)
+//                            .visible(true)
+//                            .draggable(true)
+//                            .alpha(borderMarkerAlpha.toFloat())
+//                    )
+//                    mapMarker?.tag = BorderMarkers.last().uniqueId
+//
+//                    mGoogleMap?.clear()
+//                    showAllTreeMarkers(TreeMarkers)
+//                    showAllBorderMarkers(BorderMarkers)
+//                    connectAllMarkersWithoutBorder(BorderMarkers, getMaxBorderId(BorderMarkers))
+//                    connectMarkersWithoutClosingLoop(BorderMarkers, getMaxBorderId(BorderMarkers))
                 }
             }
         }
@@ -202,7 +238,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                     val myBorder = findBorderIdByUniqueId(BorderMarkers, marker.tag)
                     if(myBorder >= 0){
                         mGoogleMap?.clear()
-                        showAllTreeMarkers(TreeMarkers)
+                        if(showAddButton != 1)
+                            showAllTreeMarkers(TreeMarkers)
                         connectAllMarkersWithoutBorder(BorderMarkers, myBorder)
                         connectMarkersWithoutClosingLoop(BorderMarkers, myBorder)
                         showAllBorderMarkers(BorderMarkers)
@@ -356,7 +393,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
     override fun onButton2Click() {
         val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
 
-        if (showAddButton == 0) {
+        if (showAddButton == 0 && showTreeButton == 0) {
             showAddButton = 1
             drawingNewBorder = true
 
@@ -373,8 +410,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         }
     }
 
+    override fun onButton3Click() {
+        if (showTreeButton == 0 && showAddButton == 0) {
+            showTreeButton = 1
+        } else {
+            showTreeButton = 0
+        }
+    }
+
     private fun eraseMarkers() {
         mGoogleMap?.clear() // This clears all markers from the map
+        showAllTreeMarkers(TreeMarkers)
         BorderMarkers.clear()
         saveList(this, "BorderMarkers", BorderMarkers) // Save the cleared state to SharedPreferences
 
@@ -432,9 +478,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         addWaypointButton.visibility = View.VISIBLE
     }
 
+    private fun showTreeButton(){
+        val addTreeButton: Button = findViewById(R.id.addTreeButton)
+        addTreeButton.visibility = View.VISIBLE
+    }
+
     private fun hideWaypointButton() {
         val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
+        val addTreeButton: Button = findViewById(R.id.addTreeButton)
         addWaypointButton.visibility = View.GONE
+        addTreeButton.visibility = View.GONE
     }
 
     // Function to retrieve a list of BorderMarkersStructure from SharedPreferences
