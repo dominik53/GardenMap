@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
             getLastLocation()
         }
 
-        // MARKER LOKALIZACJI
+        // MARKER
         val addWaypointButton: Button = findViewById(R.id.addWaypointButton)
         addWaypointButton.setOnClickListener {
             // Get the current location
@@ -142,28 +142,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 location?.let {
                     val currentLatLng = LatLng(location.latitude, location.longitude)
-                    //todo obsluga
                     showAddMarkerDialog(currentLatLng)
-//                    addNewBorderMarker(BorderMarkers, currentLatLng.latitude, currentLatLng.longitude)
-//                    saveList(this, "BorderMarkers", BorderMarkers)
-//                    printBorderMarkers(BorderMarkers)
-//
-//                    // Add a marker to the map at the current location
-//                    val mapMarker = mGoogleMap?.addMarker(
-//                        MarkerOptions()
-//                            .position(currentLatLng)
-//                            .title(BorderMarkers.last().markerName)
-//                            .visible(true)
-//                            .draggable(true)
-//                            .alpha(borderMarkerAlpha.toFloat())
-//                    )
-//                    mapMarker?.tag = BorderMarkers.last().uniqueId
-//
-//                    mGoogleMap?.clear()
-//                    showAllTreeMarkers(TreeMarkers)
-//                    showAllBorderMarkers(BorderMarkers)
-//                    connectAllMarkersWithoutBorder(BorderMarkers, getMaxBorderId(BorderMarkers))
-//                    connectMarkersWithoutClosingLoop(BorderMarkers, getMaxBorderId(BorderMarkers))
                 }
             }
         }
@@ -449,7 +428,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
                 // Permission granted, get location
                 getLastLocation()
             } else {
-                // Permission denied, handle accordingly (e.g., show explanation or disable functionality)
+                Log.d("DEV", "Permission denied.")
             }
         }
     }
@@ -490,7 +469,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         addTreeButton.visibility = View.GONE
     }
 
-    // Function to retrieve a list of BorderMarkersStructure from SharedPreferences
+    // Read BorderMarkersStructure from SharedPreferences
     private fun getList(context: Context, key: String): MutableList<BorderMarkersStructure> {
         val gson = Gson()
         val prefs = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
@@ -578,7 +557,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
         filteredList = filteredList.sortedBy { it.borderMarkerId }
 
         if (filteredList.isNotEmpty()) {
-            // Connect markers in a circular manner
+            // Connect markers in a circle
             for (i in filteredList.indices) {
                 val currentBorderMarker = filteredList[i]
                 val nextBorderMarker = filteredList[(i + 1) % filteredList.size]
@@ -712,12 +691,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, DashboardFragment.
 
     private fun findBorderIdByUniqueId(borderMarkersList: List<BorderMarkersStructure>, uniqueId: Any?): Int {
         val borderMarker = borderMarkersList.find { it.uniqueId == uniqueId }
-        return borderMarker?.borderId ?: -1 // Return a default value if borderMarker is null
+        return borderMarker?.borderId ?: -1
     }
-
-
-    /*************************************  ************************************/
-    /*****************************************************************************/
-
 
 }

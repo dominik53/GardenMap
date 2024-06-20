@@ -80,7 +80,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun toggleButton2Text() {
-        // Toggle the value of showAddMarkerButton and update textView2 text accordingly
+        // Toggle the value of showAddMarkerButton and update textView2
         showAddMarkerButton = if (showAddMarkerButton == 0 && showAddTreeButton == 0) 1 else 0
         val textView2: TextView = binding.textView2
         textView2.text = if (showAddMarkerButton == 0 || showAddTreeButton == 1) {
@@ -91,7 +91,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun toggleButton3Text() {
-        // Toggle the value of showAddTreeButton and update textView3 text accordingly
+        // Toggle the value of showAddTreeButton and update textView3
         showAddTreeButton = if (showAddTreeButton == 0 && showAddMarkerButton == 0) 1 else 0
         val textView3: TextView = binding.textView3
         textView3.text = if (showAddTreeButton == 0 || showAddMarkerButton == 1) {
